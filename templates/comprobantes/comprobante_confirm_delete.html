@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Comprobante {{ comprobante.codigo_completo }} - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="card-header bg-danger text-white py-4 text-center">
+                <i class="bi bi-exclamation-triangle-fill display-5 mb-2 d-block"></i>
+                <h4 class="fw-bold mb-0">¿Confirmar Eliminación?</h4>
+                <small class="text-white-50">Esta acción no se puede deshacer.</small>
+            </div>
+            <div class="card-body p-4 p-md-5 bg-white text-center">
+                <p class="text-secondary mb-4">
+                    Está a punto de eliminar el siguiente comprobante del sistema:
+                </p>
+
+                <div class="card bg-light border-0 p-3 mb-4 rounded-3 text-start">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Tipo y Número</small>
+                            <strong>{{ comprobante.get_tipo_comprobante_display }} {{ comprobante.codigo_completo }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">RUC Emisor</small>
+                            <code>{{ comprobante.ruc_emisor }}</code>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Fecha de Emisión</small>
+                            <span>{{ comprobante.fecha_emision|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Monto Total</small>
+                            <span class="text-danger fw-bold">S/ {{ comprobante.monto|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'comprobante_detail' comprobante.pk %}" class="btn btn-outline-secondary rounded-pill px-4">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                            <i class="bi bi-trash-fill me-1"></i>Sí, Eliminar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Historial de Validaciones SUNAT - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">
+            <i class="bi bi-clock-history text-primary me-2"></i>Historial de Validaciones SUNAT
+        </h2>
+        <p class="text-muted mb-0">Bitácora completa y detallada de todas las consultas realizadas al servicio oficial de SUNAT.</p>
+    </div>
+    <div>
+        <a href="{% url 'comprobante_list' %}" class="btn btn-outline-primary rounded-pill px-3 fw-semibold">
+            <i class="bi bi-receipt me-1"></i>Ver Comprobantes
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas de Métricas Rápidas -->
+<div class="row g-3 mb-4 text-center">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+            <small class="text-muted text-uppercase fw-semibold d-block">Total Consultas</small>
+            <span class="fs-3 fw-bold text-dark">{{ total_global }}</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-success border-4">
+            <small class="text-success text-uppercase fw-semibold d-block">Aceptadas</small>
+            <span class="fs-3 fw-bold text-success">{{ conteo_aceptadas }}</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-warning border-4">
+            <small class="text-warning-emphasis text-uppercase fw-semibold d-block">Observadas</small>
+            <span class="fs-3 fw-bold text-warning-emphasis">{{ conteo_observadas }}</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-danger border-4">
+            <small class="text-danger text-uppercase fw-semibold d-block">Rechazadas / Errores</small>
+            <span class="fs-3 fw-bold text-danger">{{ conteo_rechazadas|add:conteo_errores }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros del Historial (Fecha, Estado, Usuario, RUC, Serie) -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white py-3 border-0">
+        <h6 class="fw-bold mb-0 text-secondary">
+            <i class="bi bi-funnel-fill me-2 text-primary"></i>Filtros de Búsqueda de Validaciones
+        </h6>
+    </div>
+    <div class="card-body pt-0">
+        <form method="get" class="row g-3">
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Fecha Desde</label>
+                {{ filter_form.fecha_desde }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Fecha Hasta</label>
+                {{ filter_form.fecha_hasta }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Estado</label>
+                {{ filter_form.estado }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Usuario</label>
+                {{ filter_form.usuario }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">RUC Emisor</label>
+                {{ filter_form.ruc }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Serie</label>
+                {{ filter_form.serie }}
+            </div>
+            <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                <a href="{% url 'historial_validaciones' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar Filtros
+                </a>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                    <i class="bi bi-search me-1"></i>Filtrar Historial
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Registros del Historial -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <span class="text-muted small fw-semibold">
+            Mostrando <strong>{{ validaciones|length }}</strong> de <strong>{{ total_filtrados }}</strong> validación(es) registrada(s)
+        </span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr class="small text-muted text-uppercase">
+                    <th>Fecha y Hora</th>
+                    <th>Comprobante</th>
+                    <th>RUC Emisor</th>
+                    <th>Estado Obtenido</th>
+                    <th>Cód. Respuesta</th>
+                    <th>Mensaje de SUNAT</th>
+                    <th>Usuario</th>
+                    <th>Resultado</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for val in validaciones %}
+                <tr>
+                    <td class="text-nowrap">
+                        <small class="fw-semibold text-dark d-block">{{ val.fecha_validacion|date:"d/m/Y" }}</small>
+                        <small class="text-muted">{{ val.fecha_validacion|date:"H:i:s" }}</small>
+                    </td>
+                    <td>
+                        <a href="{% url 'comprobante_detail' val.comprobante.pk %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                            {{ val.comprobante.codigo_completo }}
+                        </a>
+                        <span class="badge bg-light text-dark border ms-1 small">
+                            {{ val.comprobante.get_tipo_comprobante_display|slice:":7" }}
+                        </span>
+                    </td>
+                    <td>
+                        <code>{{ val.comprobante.ruc_emisor }}</code>
+                    </td>
+                    <td>
+                        {% if 'Aceptado' in val.estado_sunat or val.codigo_respuesta == '1' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>ACEPTADO
+                            </span>
+                        {% elif 'Observado' in val.estado_sunat %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO
+                            </span>
+                        {% elif 'Rechazado' in val.estado_sunat or val.codigo_respuesta == '0' or val.codigo_respuesta == '2' or val.codigo_respuesta == '4' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                <i class="bi bi-x-circle-fill me-1"></i>RECHAZADO
+                            </span>
+                        {% elif 'PENDIENTE' in val.estado_sunat %}
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                <i class="bi bi-hourglass-split me-1"></i>PENDIENTE
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                <i class="bi bi-bug-fill me-1"></i>ERROR_CONSULTA
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border font-monospace">
+                            {{ val.codigo_respuesta|default:"N/A" }}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-secondary d-inline-block text-truncate" style="max-width: 250px;" title="{{ val.mensaje }}">
+                            {{ val.mensaje|default:"Consulta realizada sin observaciones adicionales." }}
+                        </small>
+                    </td>
+                    <td>
+                        <small class="text-dark fw-semibold">
+                            <i class="bi bi-person me-1 text-muted"></i>
+                            {% if val.usuario %}{{ val.usuario.get_full_name|default:val.usuario.username }}{% else %}Sistema{% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        {% if val.respuesta_sunat %}
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#jsonSunatRow{{ val.id }}" aria-expanded="false" title="Ver JSON oficial devuelto por SUNAT">
+                            <i class="bi bi-code-slash me-1"></i>JSON
+                        </button>
+                        {% else %}
+                        <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'comprobante_detail' val.comprobante.pk %}" class="btn btn-outline-primary btn-sm rounded-pill" title="Ver detalle del comprobante">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% if val.respuesta_sunat %}
+                <tr class="collapse" id="jsonSunatRow{{ val.id }}">
+                    <td colspan="9" class="p-3 bg-dark">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-light fw-bold">Respuesta oficial JSON devuelta por SUNAT para {{ val.comprobante.codigo_completo }}:</small>
+                        </div>
+                        <pre class="small text-light mb-0 text-break text-wrap font-monospace" style="max-height: 180px; overflow-y: auto;">{{ val.respuesta_sunat }}</pre>
+                    </td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-clock-history fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        <h5>No se encontraron validaciones registradas</h5>
+                        <p class="small mb-0">No existen registros en el historial que coincidan con los criterios de búsqueda seleccionados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación Bootstrap 5 -->
+    {% if is_paginated %}
+    <div class="card-footer bg-white py-3 border-0 d-flex justify-content-center">
+        <nav aria-label="Paginación de historial">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link rounded-pill me-1" href="?page={{ page_obj.previous_page_number }}{% if query_params %}&{{ query_params }}{% endif %}">
+                        &laquo; Anterior
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link rounded-pill me-1">&laquo; Anterior</span></li>
+                {% endif %}
+
+                {% for num in paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link rounded-pill mx-1">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link rounded-pill mx-1" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link rounded-pill ms-1" href="?page={{ page_obj.next_page_number }}{% if query_params %}&{{ query_params }}{% endif %}">
+                        Siguiente &raquo;
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link rounded-pill ms-1">Siguiente &raquo;</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

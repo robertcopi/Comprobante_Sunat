@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo_accion }} - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-9">
+        <div class="d-flex align-items-center mb-3">
+            <a href="{% url 'comprobante_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill me-3">
+                <i class="bi bi-arrow-left me-1"></i>Volver al Listado
+            </a>
+            <h3 class="fw-bold text-dark mb-0">{{ titulo_accion }}</h3>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4 p-md-5">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Bloque 1: Identificación Fiscal del Comprobante -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-building me-2"></i>1. Identificación del Comprobante
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.ruc_emisor.id_for_label }}" class="form-label fw-semibold">
+                                    RUC Emisor <span class="text-danger">*</span>
+                                </label>
+                                {{ form.ruc_emisor }}
+                                <small class="text-muted">11 dígitos numéricos de la empresa emisora.</small>
+                                {% if form.ruc_emisor.errors %}
+                                    <div class="text-danger small mt-1">{{ form.ruc_emisor.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo_comprobante.id_for_label }}" class="form-label fw-semibold">
+                                    Tipo de Comprobante <span class="text-danger">*</span>
+                                </label>
+                                {{ form.tipo_comprobante }}
+                                {% if form.tipo_comprobante.errors %}
+                                    <div class="text-danger small mt-1">{{ form.tipo_comprobante.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.serie.id_for_label }}" class="form-label fw-semibold">
+                                    Serie <span class="text-danger">*</span>
+                                </label>
+                                {{ form.serie }}
+                                <small class="text-muted">4 caracteres alfanuméricos (ej. B001, F001, EB01).</small>
+                                {% if form.serie.errors %}
+                                    <div class="text-danger small mt-1">{{ form.serie.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.numero.id_for_label }}" class="form-label fw-semibold">
+                                    Número Correlativo <span class="text-danger">*</span>
+                                </label>
+                                {{ form.numero }}
+                                <small class="text-muted">Número entero correlativo (hasta 8 dígitos).</small>
+                                {% if form.numero.errors %}
+                                    <div class="text-danger small mt-1">{{ form.numero.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloque 2: Emisión e Importe -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-calendar-check me-2"></i>2. Datos de Emisión e Importe
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.fecha_emision.id_for_label }}" class="form-label fw-semibold">
+                                    Fecha de Emisión <span class="text-danger">*</span>
+                                </label>
+                                {{ form.fecha_emision }}
+                                {% if form.fecha_emision.errors %}
+                                    <div class="text-danger small mt-1">{{ form.fecha_emision.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.monto.id_for_label }}" class="form-label fw-semibold">
+                                    Monto Total (S/) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">S/</span>
+                                    {{ form.monto }}
+                                </div>
+                                {% if form.monto.errors %}
+                                    <div class="text-danger small mt-1">{{ form.monto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloque 3: Datos del Receptor / Cliente (Opcionales) -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-secondary border-bottom pb-2 mb-3">
+                            <i class="bi bi-person-lines-fill me-2"></i>3. Datos del Receptor / Cliente <small class="text-muted fw-normal">(Opcional)</small>
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.tipo_documento_receptor.id_for_label }}" class="form-label fw-semibold">Tipo de Documento</label>
+                                {{ form.tipo_documento_receptor }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.numero_documento_receptor.id_for_label }}" class="form-label fw-semibold">Número de Documento</label>
+                                {{ form.numero_documento_receptor }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.denominacion_receptor.id_for_label }}" class="form-label fw-semibold">Nombre o Razón Social</label>
+                                {{ form.denominacion_receptor }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 small d-flex align-items-center rounded-3">
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        <span>Todo comprobante nuevo se guardará con el estado inicial <strong>PENDIENTE</strong>, listo para su validación ante SUNAT.</span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'comprobante_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i>{{ boton_texto }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

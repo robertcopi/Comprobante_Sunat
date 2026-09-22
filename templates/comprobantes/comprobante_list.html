@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block title %}Comprobantes Electrónicos - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">
+            <i class="bi bi-receipt text-primary me-2"></i>Comprobantes Electrónicos
+        </h2>
+        <p class="text-muted mb-0">Gestión, búsqueda y control de boletas y facturas registradas en el sistema.</p>
+    </div>
+    <div>
+        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+        <a href="{% url 'comprobante_create' %}" class="btn btn-primary shadow-sm rounded-pill px-3 fw-bold">
+            <i class="bi bi-plus-circle-fill me-2"></i>Registrar Comprobante
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tarjeta de Búsqueda y Filtros Avanzados -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white py-3 border-0">
+        <h6 class="fw-bold mb-0 text-secondary">
+            <i class="bi bi-funnel-fill me-2 text-primary"></i>Filtros de Búsqueda
+        </h6>
+    </div>
+    <div class="card-body pt-0">
+        <form method="get" class="row g-3">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold text-muted">Búsqueda General</label>
+                {{ filter_form.q }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Estado</label>
+                {{ filter_form.estado }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Tipo CP</label>
+                {{ filter_form.tipo_comprobante }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">RUC Emisor</label>
+                {{ filter_form.ruc_emisor }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Serie</label>
+                {{ filter_form.serie }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Fecha Desde</label>
+                {{ filter_form.fecha_desde }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold text-muted">Fecha Hasta</label>
+                {{ filter_form.fecha_hasta }}
+            </div>
+            <div class="col-12 col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold flex-fill">
+                    <i class="bi bi-search me-1"></i>Filtrar
+                </button>
+                <a href="{% url 'comprobante_list' %}" class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen de Validación Masiva Oficial ante SUNAT (Paso 10) -->
+{% if resumen_masivo %}
+<div class="card border-0 shadow-sm rounded-4 mb-4 border-start border-primary border-4">
+    <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-pie-chart-fill text-primary me-2"></i>Resumen de Validación Masiva con SUNAT
+        </h5>
+        <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold">
+            Procesamiento por Lotes Finalizado
+        </span>
+    </div>
+    <div class="card-body pt-0">
+        <div class="row g-3 text-center mb-3">
+            <div class="col-6 col-md">
+                <div class="p-3 bg-light rounded-4 border">
+                    <small class="text-muted text-uppercase fw-semibold d-block">TOTAL PROCESADOS</small>
+                    <span class="fs-3 fw-bold text-dark">{{ resumen_masivo.total_procesados }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="p-3 bg-success-subtle rounded-4 border border-success-subtle">
+                    <small class="text-success text-uppercase fw-semibold d-block">ACEPTADOS</small>
+                    <span class="fs-3 fw-bold text-success">{{ resumen_masivo.aceptados }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="p-3 bg-warning-subtle rounded-4 border border-warning-subtle">
+                    <small class="text-warning-emphasis text-uppercase fw-semibold d-block">OBSERVADOS</small>
+                    <span class="fs-3 fw-bold text-warning-emphasis">{{ resumen_masivo.observados }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="p-3 bg-danger-subtle rounded-4 border border-danger-subtle">
+                    <small class="text-danger text-uppercase fw-semibold d-block">RECHAZADOS</small>
+                    <span class="fs-3 fw-bold text-danger">{{ resumen_masivo.rechazados }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="p-3 bg-secondary-subtle rounded-4 border border-secondary-subtle">
+                    <small class="text-secondary text-uppercase fw-semibold d-block">ERROR DE CONSULTA</small>
+                    <span class="fs-3 fw-bold text-secondary">{{ resumen_masivo.errores_consulta }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if resumen_masivo.omitidos_por_aceptados %}
+        <div class="alert alert-info py-2 px-3 small mb-2 d-flex align-items-center">
+            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+            <div>
+                Se omitieron <strong>{{ resumen_masivo.omitidos_por_aceptados }}</strong> comprobante(s) que ya se encontraban previamente en estado <strong>ACEPTADO</strong>.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if resumen_masivo.detalles %}
+        <div class="text-end">
+            <button class="btn btn-sm btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#detalleLoteMasivo" aria-expanded="false">
+                <i class="bi bi-list-check me-1"></i>Ver detalle de comprobantes del lote
+            </button>
+        </div>
+        <div class="collapse mt-2" id="detalleLoteMasivo">
+            <div class="table-responsive rounded-3 border" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Comprobante</th>
+                            <th>Tipo</th>
+                            <th>Estado Final</th>
+                            <th>Mensaje / Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in resumen_masivo.detalles %}
+                        <tr>
+                            <td class="fw-bold font-monospace">{{ d.codigo }}</td>
+                            <td>{{ d.tipo }}</td>
+                            <td>
+                                {% if d.estado == 'ACEPTADO' %}
+                                    <span class="badge bg-success">ACEPTADO</span>
+                                {% elif d.estado == 'OBSERVADO' %}
+                                    <span class="badge bg-warning text-dark">OBSERVADO</span>
+                                {% elif d.estado == 'RECHAZADO' %}
+                                    <span class="badge bg-danger">RECHAZADO</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">ERROR_CONSULTA</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted">{{ d.mensaje }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulario de Selección y Validación Masiva -->
+<form method="post" action="{% url 'comprobante_validar_masivo' %}" id="form-validacion-masiva">
+    {% csrf_token %}
+
+    <!-- Tabla de Comprobantes -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small fw-semibold">
+                    Mostrando <strong>{{ comprobantes|length }}</strong> de <strong>{{ total_filtrados }}</strong> comprobante(s)
+                </span>
+                {% if total_pendientes_sistema %}
+                <span class="badge bg-info-subtle text-info-emphasis rounded-pill px-2 py-1 small">
+                    <i class="bi bi-hourglass-split me-1"></i>{{ total_pendientes_sistema }} pendiente(s) en total
+                </span>
+                {% endif %}
+            </div>
+
+            {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <!-- Botón: Validar Seleccionados -->
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-bold d-flex align-items-center gap-1" id="btn-validar-seleccionados" disabled>
+                    <i class="bi bi-shield-check"></i>
+                    <span id="btn-validar-sel-text">Validar con SUNAT</span>
+                    <span class="badge bg-white text-primary rounded-pill ms-1 d-none" id="badge-count-seleccionados">0</span>
+                </button>
+
+                <!-- Botón: Validar Todos los Pendientes -->
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold d-flex align-items-center gap-1" id="btn-validar-todos" data-bs-toggle="modal" data-bs-target="#modalConfirmarValidarTodos">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span>Validar todos los pendientes</span>
+                    {% if total_pendientes_sistema %}
+                    <span class="badge bg-primary text-white rounded-pill ms-1">{{ total_pendientes_sistema }}</span>
+                    {% endif %}
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted text-uppercase">
+                        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                        <th style="width: 40px;" class="text-center pe-0">
+                            <input type="checkbox" id="check-all" class="form-check-input" title="Seleccionar todos los comprobantes pendientes visibles">
+                        </th>
+                        {% endif %}
+                        <th>Tipo</th>
+                        <th>Comprobante</th>
+                        <th>RUC Emisor</th>
+                        <th>Fecha Emisión</th>
+                        <th>Importe</th>
+                        <th>Cliente / Receptor</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cp in comprobantes %}
+                    <tr class="{% if cp.estado == 'PENDIENTE' or cp.estado == 'ERROR_CONSULTA' %}table-light-subtle{% endif %}">
+                        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                        <td class="text-center pe-0">
+                            {% if cp.estado != 'ACEPTADO' %}
+                            <input type="checkbox" name="comprobantes_ids" value="{{ cp.pk }}" class="form-check-input cp-checkbox" data-estado="{{ cp.estado }}">
+                            {% else %}
+                            <span class="text-success" title="Comprobante ya ACEPTADO por SUNAT">
+                                <i class="bi bi-check2-all fs-5"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ cp.get_tipo_comprobante_display|slice:":12" }}</span>
+                        </td>
+                        <td>
+                            <a href="{% url 'comprobante_detail' cp.pk %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                {{ cp.codigo_completo }}
+                            </a>
+                        </td>
+                        <td>
+                            <code>{{ cp.ruc_emisor }}</code>
+                        </td>
+                        <td>
+                            <small class="text-secondary">{{ cp.fecha_emision|date:"d/m/Y" }}</small>
+                        </td>
+                        <td>
+                            <span class="fw-bold">S/ {{ cp.monto|floatformat:2 }}</span>
+                        </td>
+                        <td>
+                            <small class="text-truncate d-inline-block" style="max-width: 180px;">
+                                {{ cp.denominacion_receptor|default:"Cliente general" }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if cp.estado == 'PENDIENTE' %}
+                                <span class="badge bg-info text-dark"><i class="bi bi-hourglass-split me-1"></i>PENDIENTE</span>
+                            {% elif cp.estado == 'ACEPTADO' %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>ACEPTADO</span>
+                            {% elif cp.estado == 'OBSERVADO' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO</span>
+                            {% elif cp.estado == 'RECHAZADO' %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>RECHAZADO</span>
+                            {% elif cp.estado == 'ERROR_CONSULTA' %}
+                                <span class="badge bg-secondary"><i class="bi bi-bug-fill me-1"></i>ERROR_CONSULTA</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">{{ cp.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'comprobante_detail' cp.pk %}" class="btn btn-outline-secondary" title="Ver Detalle">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                                {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                                <a href="{% url 'comprobante_update' cp.pk %}" class="btn btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+                                {% endif %}
+                                {% if user.role == 'ADMINISTRADOR' or user.is_superuser or cp.estado == 'PENDIENTE' %}
+                                <a href="{% url 'comprobante_delete' cp.pk %}" class="btn btn-outline-danger" title="Eliminar">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-1 d-block mb-2 text-secondary"></i>
+                            <h5>No se encontraron comprobantes</h5>
+                            <p class="small mb-3">No hay comprobantes que coincidan con los criterios de búsqueda.</p>
+                            {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                            <a href="{% url 'comprobante_create' %}" class="btn btn-primary btn-sm rounded-pill px-3">
+                                <i class="bi bi-plus-circle me-1"></i>Registrar el primer comprobante
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación Bootstrap 5 -->
+        {% if is_paginated %}
+        <div class="card-footer bg-white py-3 border-0 d-flex justify-content-center">
+            <nav aria-label="Paginación de comprobantes">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link rounded-pill me-1" href="?page={{ page_obj.previous_page_number }}{% if query_params %}&{{ query_params }}{% endif %}">
+                            &laquo; Anterior
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-pill me-1">&laquo; Anterior</span></li>
+                    {% endif %}
+
+                    {% for num in paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link rounded-pill mx-1">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link rounded-pill mx-1" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link rounded-pill ms-1" href="?page={{ page_obj.next_page_number }}{% if query_params %}&{{ query_params }}{% endif %}">
+                            Siguiente &raquo;
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-pill ms-1">Siguiente &raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<!-- Modal de Confirmación: Validar Todos los Pendientes -->
+<div class="modal fade" id="modalConfirmarValidarTodos" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="modalConfirmarLabel">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Validar Todos los Pendientes
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="mb-3 text-secondary">
+                    Se iniciará la validación masiva y controlada de los comprobantes con estado <strong>PENDIENTE</strong> o <strong>ERROR_CONSULTA</strong> ante SUNAT.
+                </p>
+                <div class="alert alert-light border rounded-3 small mb-0">
+                    <ul class="mb-0 ps-3">
+                        <li>El procesamiento se ejecuta por lotes (hasta 50 por ejecución) respetando las restricciones oficiales de tasa de peticiones de SUNAT.</li>
+                        <li>Los comprobantes ya <strong>ACEPTADOS</strong> no se reprocesarán.</li>
+                        <li>Si ocurre un error de conexión con SUNAT, el comprobante se mantendrá en <strong>ERROR_CONSULTA</strong> y el proceso continuará con los demás.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{% url 'comprobante_validar_masivo' %}" id="form-validar-todos-confirmado">
+                    {% csrf_token %}
+                    <input type="hidden" name="validar_todos_pendientes" value="1">
+                    <input type="hidden" name="limite" value="50">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" id="btn-confirmar-todos-submit">
+                        <i class="bi bi-play-fill me-1"></i>Iniciar Validación
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkAll = document.getElementById('check-all');
+    const checkboxes = document.querySelectorAll('.cp-checkbox');
+    const btnValidarSel = document.getElementById('btn-validar-seleccionados');
+    const btnValidarSelText = document.getElementById('btn-validar-sel-text');
+    const badgeCount = document.getElementById('badge-count-seleccionados');
+    const formMasivo = document.getElementById('form-validacion-masiva');
+    const formTodos = document.getElementById('form-validar-todos-confirmado');
+    const btnTodosSubmit = document.getElementById('btn-confirmar-todos-submit');
+
+    function updateSelectionState() {
+        const checkedList = document.querySelectorAll('.cp-checkbox:checked');
+        const count = checkedList.length;
+
+        if (btnValidarSel) {
+            btnValidarSel.disabled = (count === 0);
+            if (count > 0) {
+                btnValidarSelText.textContent = `Validar con SUNAT (${count})`;
+                badgeCount.textContent = count;
+                badgeCount.classList.remove('d-none');
+            } else {
+                btnValidarSelText.textContent = 'Validar con SUNAT';
+                badgeCount.classList.add('d-none');
+            }
+        }
+
+        if (checkAll && checkboxes.length > 0) {
+            checkAll.checked = (count === checkboxes.length);
+            checkAll.indeterminate = (count > 0 && count < checkboxes.length);
+        }
+    }
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = checkAll.checked;
+            });
+            updateSelectionState();
+        });
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectionState);
+    });
+
+    if (formMasivo && btnValidarSel) {
+        formMasivo.addEventListener('submit', function() {
+            btnValidarSel.disabled = true;
+            btnValidarSel.classList.add('opacity-75');
+            btnValidarSelText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando lote SUNAT...';
+        });
+    }
+
+    if (formTodos && btnTodosSubmit) {
+        formTodos.addEventListener('submit', function() {
+            btnTodosSubmit.disabled = true;
+            btnTodosSubmit.classList.add('opacity-75');
+            btnTodosSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Validando pendientes...';
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultado de Importación #{{ lote.id }} - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+        <a href="{% url 'importacion_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill mb-2">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Historial
+        </a>
+        <h2 class="fw-bold text-dark mb-0">
+            Lote de Importación <span class="text-primary">#{{ lote.id }}</span>
+        </h2>
+        <p class="text-muted mb-0 small">
+            Archivo: <strong>{{ lote.nombre_archivo }}</strong> | 
+            Cargado por: <strong>{{ lote.usuario.username|default:"Sistema" }}</strong> | 
+            Fecha: {{ lote.fecha_carga|date:"d/m/Y H:i:s" }}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'comprobante_list' %}" class="btn btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-receipt me-1"></i>Ver Comprobantes
+        </a>
+        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+        <a href="{% url 'importacion_upload' %}" class="btn btn-primary rounded-pill px-3 fw-bold">
+            <i class="bi bi-cloud-plus-fill me-1"></i>Nueva Importación
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 4 Métricas Clave Requeridas -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 border-start border-4 border-primary">
+            <div class="card-body p-4">
+                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Leído</span>
+                <h2 class="fw-bold mb-0 text-dark">{{ lote.total_leidos }}</h2>
+                <small class="text-muted">Filas procesadas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 border-start border-4 border-success">
+            <div class="card-body p-4">
+                <span class="text-success small fw-semibold text-uppercase d-block mb-1">Importados Correctamente</span>
+                <h2 class="fw-bold mb-0 text-success">{{ lote.importados_correctos }}</h2>
+                <small class="text-muted">Registrados en PENDIENTE</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 border-start border-4 border-warning">
+            <div class="card-body p-4">
+                <span class="text-warning-emphasis small fw-semibold text-uppercase d-block mb-1">Duplicados</span>
+                <h2 class="fw-bold mb-0 text-warning-emphasis">{{ lote.total_duplicados }}</h2>
+                <small class="text-muted">Ya existentes (omitidos)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 border-start border-4 border-danger">
+            <div class="card-body p-4">
+                <span class="text-danger small fw-semibold text-uppercase d-block mb-1">Registros con Errores</span>
+                <h2 class="fw-bold mb-0 text-danger">{{ lote.total_errores }}</h2>
+                <small class="text-muted">Datos inválidos (omitidos)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Detalle de Errores de Validación -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Registros con Errores de Validación
+                </h5>
+                <span class="badge bg-danger-subtle text-danger rounded-pill">{{ lote.total_errores }}</span>
+            </div>
+            <div class="card-body pt-0">
+                {% if lote.errores_detalle %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small text-muted">
+                                    <th style="width: 80px;">Fila</th>
+                                    <th>Motivo del Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in lote.errores_detalle %}
+                                <tr>
+                                    <td><span class="badge bg-danger-subtle text-danger font-monospace">Fila {{ item.fila }}</span></td>
+                                    <td class="small text-dark">{{ item.motivo }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-1"></i>
+                        <span class="small">No se encontraron errores de validación en este lote.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle de Comprobantes Duplicados -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-warning-emphasis">
+                    <i class="bi bi-copy me-2"></i>Comprobantes Duplicados Omitidos
+                </h5>
+                <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">{{ lote.total_duplicados }}</span>
+            </div>
+            <div class="card-body pt-0">
+                {% if lote.duplicados_detalle %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small text-muted">
+                                    <th style="width: 80px;">Fila</th>
+                                    <th>Comprobante</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in lote.duplicados_detalle %}
+                                <tr>
+                                    <td><span class="badge bg-warning-subtle text-warning-emphasis font-monospace">Fila {{ item.fila }}</span></td>
+                                    <td>
+                                        <span class="fw-bold text-dark">{{ item.comprobante }}</span>
+                                        <br><small class="text-muted">RUC: {{ item.ruc }}</small>
+                                    </td>
+                                    <td class="small text-muted">{{ item.motivo }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-1"></i>
+                        <span class="small">No se detectaron comprobantes duplicados en este lote.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

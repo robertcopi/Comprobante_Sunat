@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Importación Masiva de Comprobantes - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="d-flex align-items-center mb-3">
+            <a href="{% url 'importacion_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill me-3">
+                <i class="bi bi-arrow-left me-1"></i>Volver al Historial
+            </a>
+            <h3 class="fw-bold text-dark mb-0">Importación Masiva de Comprobantes</h3>
+        </div>
+
+        <!-- Tarjeta de instrucciones y descarga de plantillas -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="p-3 bg-primary-subtle text-primary rounded-3 d-none d-sm-block">
+                        <i class="bi bi-file-earmark-spreadsheet-fill fs-2"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="fw-bold text-dark mb-1">Estructura requerida del archivo</h5>
+                        <p class="text-muted small mb-3">
+                            Su archivo (Excel o CSV) debe contener exactamente los siguientes encabezados en la primera fila:
+                        </p>
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            <span class="badge bg-dark font-monospace">RUC</span>
+                            <span class="badge bg-dark font-monospace">TIPO</span>
+                            <span class="badge bg-dark font-monospace">SERIE</span>
+                            <span class="badge bg-dark font-monospace">NUMERO</span>
+                            <span class="badge bg-dark font-monospace">FECHA</span>
+                            <span class="badge bg-dark font-monospace">MONTO</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'importacion_plantilla_excel' %}" class="btn btn-outline-success btn-sm rounded-pill fw-semibold">
+                                <i class="bi bi-file-earmark-excel me-1"></i>Descargar Plantilla Excel (.xlsx)
+                            </a>
+                            <a href="{% url 'importacion_plantilla_csv' %}" class="btn btn-outline-secondary btn-sm rounded-pill fw-semibold">
+                                <i class="bi bi-filetype-csv me-1"></i>Descargar Plantilla CSV (.csv)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de carga de archivo -->
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4 p-md-5">
+                <h5 class="fw-bold text-primary mb-3">
+                    <i class="bi bi-cloud-arrow-up-fill me-2"></i>Seleccionar archivo para procesar
+                </h5>
+
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% for error in form.archivo.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label for="{{ form.archivo.id_for_label }}" class="form-label fw-semibold text-secondary">
+                            Archivo Excel (.xlsx, .xls) o CSV (.csv)
+                        </label>
+                        {{ form.archivo }}
+                        <div class="form-text small text-muted mt-2">
+                            <i class="bi bi-check2 me-1"></i>Se validarán formatos de RUC, serie, número, fecha y monto fila por fila.<br>
+                            <i class="bi bi-check2 me-1"></i>Si una fila contiene errores o está duplicada, se omitirá sin detener la importación del resto de comprobantes.<br>
+                            <i class="bi bi-check2 me-1"></i>Todos los comprobantes importados se guardarán inicialmente con estado <strong>PENDIENTE</strong>.
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
+                            <i class="bi bi-upload me-2"></i>Subir y Procesar Archivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

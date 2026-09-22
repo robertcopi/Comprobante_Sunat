@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Comprobante {{ comprobante.codigo_completo }} - SUNAT Validator{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+    <div>
+        <a href="{% url 'comprobante_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill mb-2">
+            <i class="bi bi-arrow-left me-1"></i>Volver a Comprobantes
+        </a>
+        <h2 class="fw-bold text-dark mb-0">
+            {{ comprobante.get_tipo_comprobante_display }} <span class="text-primary">{{ comprobante.codigo_completo }}</span>
+        </h2>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+        <form method="post" action="{% url 'comprobante_validar' comprobante.pk %}" class="d-inline" id="form-validar-sunat">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold d-flex align-items-center gap-2" id="btn-validar-sunat">
+                <i class="bi bi-shield-check fs-5"></i>
+                <span id="btn-validar-text">Validar con SUNAT</span>
+            </button>
+        </form>
+        <a href="{% url 'comprobante_update' comprobante.pk %}" class="btn btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-pencil-fill me-1"></i>Editar
+        </a>
+        {% endif %}
+        {% if user.role == 'ADMINISTRADOR' or user.is_superuser or comprobante.estado == 'PENDIENTE' %}
+        <a href="{% url 'comprobante_delete' comprobante.pk %}" class="btn btn-outline-danger rounded-pill px-3">
+            <i class="bi bi-trash-fill me-1"></i>Eliminar
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Columna Izquierda: Información del Comprobante -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-file-earmark-text text-primary me-2"></i>Datos del Comprobante
+                </h5>
+                <div>
+                    {% if comprobante.estado == 'PENDIENTE' %}
+                        <span class="badge bg-info text-dark fs-6 px-3 py-2"><i class="bi bi-hourglass-split me-1"></i>PENDIENTE</span>
+                    {% elif comprobante.estado == 'ACEPTADO' %}
+                        <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i>ACEPTADO</span>
+                    {% elif comprobante.estado == 'OBSERVADO' %}
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO</span>
+                    {% elif comprobante.estado == 'RECHAZADO' %}
+                        <span class="badge bg-danger fs-6 px-3 py-2"><i class="bi bi-x-circle-fill me-1"></i>RECHAZADO</span>
+                    {% elif comprobante.estado == 'ERROR_CONSULTA' %}
+                        <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-bug-fill me-1"></i>ERROR DE CONSULTA</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6 px-3 py-2">{{ comprobante.get_estado_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="row g-3 py-2">
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">RUC Emisor</small>
+                        <span class="fs-5 fw-bold text-dark font-monospace">{{ comprobante.ruc_emisor }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Tipo de Comprobante</small>
+                        <span class="fw-semibold text-dark">{{ comprobante.get_tipo_comprobante_display }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Serie y Número</small>
+                        <span class="fw-bold text-primary fs-5">{{ comprobante.codigo_completo }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Fecha de Emisión</small>
+                        <span class="fw-semibold text-dark">{{ comprobante.fecha_emision|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Importe Total</small>
+                        <span class="fs-4 fw-bold text-success">S/ {{ comprobante.monto|floatformat:2 }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Fecha de Registro en Sistema</small>
+                        <span class="text-secondary small">{{ comprobante.fecha_registro|date:"d/m/Y H:i:s" }}</span>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted d-block">Usuario que Registró</small>
+                        <span class="text-dark fw-semibold">
+                            {% if comprobante.usuario_registro %}
+                                {{ comprobante.usuario_registro.get_full_name|default:comprobante.usuario_registro.username }}
+                            {% else %}
+                                Sistema
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datos del Receptor -->
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-0">
+                <h5 class="fw-bold mb-0 text-secondary">
+                    <i class="bi bi-person-vcard text-primary me-2"></i>Datos del Receptor / Cliente
+                </h5>
+            </div>
+            <div class="card-body pt-0">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Tipo y N° Documento</small>
+                        <span class="fw-semibold text-dark">
+                            {% if comprobante.numero_documento_receptor %}
+                                {{ comprobante.tipo_documento_receptor|default:"DOC" }}: {{ comprobante.numero_documento_receptor }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Razón Social / Nombre</small>
+                        <span class="fw-semibold text-dark">
+                            {{ comprobante.denominacion_receptor|default:"Consumidor Final / No especificado" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Historial de Validaciones con SUNAT -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-clock-history text-primary me-2"></i>Historial SUNAT
+                </h5>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill">
+                    {{ historial_validaciones|length }} consulta(s)
+                </span>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <p class="text-muted small mb-0">
+                        Historial cronológico de validaciones oficiales realizadas.
+                    </p>
+                    {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="document.getElementById('btn-validar-sunat').click();">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidar
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if historial_validaciones %}
+                    <div class="list-group list-group-flush">
+                        {% for val in historial_validaciones %}
+                        <div class="list-group-item px-0 py-3 border-bottom">
+                            <!-- Fecha y Hora → Estado Obtenido -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-1">
+                                <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                    <span class="font-monospace">{{ val.fecha_validacion|date:"d/m/Y H:i" }}</span>
+                                    <i class="bi bi-arrow-right text-primary"></i>
+                                    {% if 'Aceptado' in val.estado_sunat or val.codigo_respuesta == '1' %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>ACEPTADO</span>
+                                    {% elif 'Observado' in val.estado_sunat %}
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO</span>
+                                    {% elif 'Rechazado' in val.estado_sunat or val.codigo_respuesta == '0' or val.codigo_respuesta == '2' or val.codigo_respuesta == '4' %}
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>RECHAZADO</span>
+                                    {% elif 'PENDIENTE' in val.estado_sunat %}
+                                        <span class="badge bg-info text-dark"><i class="bi bi-hourglass-split me-1"></i>PENDIENTE</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-bug-fill me-1"></i>ERROR_CONSULTA</span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-light text-dark border font-monospace small">
+                                    Cód. {{ val.codigo_respuesta|default:"N/A" }}
+                                </span>
+                            </div>
+
+                            <!-- Mensaje de SUNAT -->
+                            {% if val.mensaje %}
+                                <div class="bg-light p-2 rounded-3 small text-secondary mb-2 border">
+                                    {{ val.mensaje }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Usuario y enlace a JSON resultado -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="bi bi-person me-1"></i>{% if val.usuario %}{{ val.usuario.get_full_name|default:val.usuario.username }}{% else %}Sistema{% endif %}
+                                </small>
+                                {% if val.respuesta_sunat %}
+                                <a class="small text-decoration-none" data-bs-toggle="collapse" href="#rawSunat{{ val.id }}" role="button" aria-expanded="false">
+                                    <i class="bi bi-code-slash me-1"></i>Resultado de la consulta (JSON)
+                                </a>
+                                {% endif %}
+                            </div>
+
+                            {% if val.respuesta_sunat %}
+                            <div class="collapse mt-2" id="rawSunat{{ val.id }}">
+                                <div class="card card-body bg-dark text-light p-2 rounded-3">
+                                    <pre class="small mb-0 text-break text-wrap font-monospace" style="max-height: 150px; overflow-y: auto;">{{ val.respuesta_sunat }}</pre>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <!-- Registro base inicial PENDIENTE -->
+                        <div class="list-group-item px-0 py-3 text-muted">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="small fw-semibold d-flex align-items-center gap-2">
+                                    <span class="font-monospace text-secondary">{{ comprobante.fecha_registro|date:"d/m/Y H:i" }}</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">PENDIENTE</span>
+                                </div>
+                                <small class="text-muted">Registro inicial en el sistema</small>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-shield-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        <h6 class="fw-bold">Sin validaciones registradas</h6>
+                        <p class="small mb-3">Este comprobante no ha sido consultado ante el servicio de SUNAT todavía.</p>
+                        {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="document.getElementById('btn-validar-sunat').click();">
+                            <i class="bi bi-shield-check me-1"></i>Ejecutar primera validación
+                        </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formValidar = document.getElementById('form-validar-sunat');
+    const btnValidar = document.getElementById('btn-validar-sunat');
+    const textValidar = document.getElementById('btn-validar-text');
+
+    if (formValidar && btnValidar) {
+        formValidar.addEventListener('submit', function() {
+            btnValidar.disabled = true;
+            btnValidar.classList.add('opacity-75');
+            textValidar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Consultando SUNAT...';
+        });
+    }
+});
+</script>
+{% endblock %}
