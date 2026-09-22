@@ -61,7 +61,7 @@
                     </li>
                     {% if user.is_administrador or user.is_supervisor %}
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/reportes/reportegenerado/">
+                        <a class="nav-link {% if request.resolver_match.app_name == 'reportes' or request.resolver_match.url_name == 'reporte_comprobantes' %}active{% endif %}" href="{% url 'reporte_comprobantes' %}">
                             <i class="bi bi-bar-chart me-1"></i>Reportes
                         </a>
                     </li>

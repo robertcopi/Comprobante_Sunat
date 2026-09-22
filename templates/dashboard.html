@@ -1,300 +1,377 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard Principal - SUNAT Validator{% endblock %}
+{% block title %}Dashboard Principal | SUNAT Validator{% endblock %}
 
 {% block content %}
-<div class="row align-items-center mb-4 pb-2 border-bottom">
-    <div class="col-md-8">
-        <h2 class="fw-bold text-dark mb-1">
-            <i class="bi bi-speedometer2 text-primary me-2"></i>Panel de Control
-        </h2>
-        <p class="text-muted mb-0">
-            Usuario: <strong class="text-dark">{{ user.username }}</strong> ({{ user.get_full_name|default:"Sin nombre asignado" }}) | 
-            Rol: 
-            {% if user.role == 'ADMINISTRADOR' or user.is_superuser %}
-                <span class="badge bg-danger"><i class="bi bi-shield-check me-1"></i>ADMINISTRADOR</span>
-            {% elif user.role == 'SUPERVISOR' %}
-                <span class="badge bg-warning text-dark"><i class="bi bi-eye-fill me-1"></i>SUPERVISOR</span>
-            {% else %}
-                <span class="badge bg-primary"><i class="bi bi-person-workspace me-1"></i>TRABAJADOR</span>
-            {% endif %}
-        </p>
-    </div>
-    <div class="col-md-4 text-md-end mt-3 mt-md-0">
-        <span class="text-muted small"><i class="bi bi-clock me-1"></i>Último acceso registrado hoy</span>
+<!-- Cabecera del Dashboard con Filtro de Fechas -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="row align-items-center gy-3">
+            <div class="col-lg-6">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item text-muted">Sistema</li>
+                        <li class="breadcrumb-item active" aria-current="page">Dashboard Principal</li>
+                    </ol>
+                </nav>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h2 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-speedometer2 text-primary me-2"></i>Panel de Control
+                    </h2>
+                    {% if user.role == 'ADMINISTRADOR' or user.is_superuser %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 rounded-pill">
+                            <i class="bi bi-shield-check me-1"></i>ADMINISTRADOR
+                        </span>
+                    {% elif user.role == 'SUPERVISOR' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1 rounded-pill">
+                            <i class="bi bi-eye-fill me-1"></i>SUPERVISOR
+                        </span>
+                    {% else %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill">
+                            <i class="bi bi-person-workspace me-1"></i>TRABAJADOR
+                        </span>
+                    {% endif %}
+                </div>
+                <p class="text-muted small mb-0 mt-1">
+                    Sesión iniciada como <strong>{{ user.get_full_name|default:user.username }}</strong>. Supervisión de validaciones electrónicas SUNAT.
+                </p>
+            </div>
+
+            <!-- Formulario de Filtro por Rango de Fechas -->
+            <div class="col-lg-6">
+                <form method="get" action="{% url 'dashboard' %}" class="row g-2 justify-content-lg-end align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Fecha Desde</label>
+                        <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="form-control form-control-sm rounded-3 shadow-none">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small fw-semibold text-secondary mb-1">Fecha Hasta</label>
+                        <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="form-control form-control-sm rounded-3 shadow-none">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" title="Filtrar estadísticas por rango de fechas">
+                            <i class="bi bi-funnel-fill me-1"></i>Filtrar
+                        </button>
+                        {% if filtro_activo %}
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-2" title="Limpiar filtro de fechas">
+                                <i class="bi bi-x-circle"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+                {% if filtro_activo %}
+                <div class="text-lg-end mt-1">
+                    <span class="badge bg-info-subtle text-info border border-info-subtle small" style="font-size: 0.72rem;">
+                        <i class="bi bi-info-circle me-1"></i>Métricas filtradas por período: {{ fecha_desde|default:"Inicio" }} al {{ fecha_hasta|default:"Hoy" }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Tarjetas de Métricas Rápidas (KPIs) -->
+<!-- Banner Destacado: Comprobantes procesados hoy -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-white bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="bi bi-lightning-charge-fill fs-3 text-warning"></i>
+                    </div>
+                    <div>
+                        <span class="text-white-50 small text-uppercase fw-bold letter-spacing-1">Actividad en Tiempo Real</span>
+                        <h4 class="fw-bold mb-0">Comprobantes procesados hoy</h4>
+                        <small class="text-white-50">Consultas de validación realizadas ante el servicio web oficial de SUNAT durante el día de hoy.</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="d-inline-block bg-white text-dark py-2 px-4 rounded-4 shadow-sm text-center">
+                    <span class="fs-1 fw-bold text-primary d-block lh-1">{{ procesados_hoy }}</span>
+                    <small class="text-muted fw-semibold text-uppercase" style="font-size: 0.68rem;">Validaciones Hoy</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6 Tarjetas de Métricas Principales (KPIs) Requeridas -->
 <div class="row g-3 mb-4">
+    <!-- TOTAL COMPROBANTES -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-semibold">TOTAL</span>
-                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-files"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-dark">{{ total_comprobantes }}</h3>
-                <small class="text-muted">Comprobantes</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-bold">TOTAL COMPROBANTES</span>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill p-2"><i class="bi bi-files"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-dark">{{ total_comprobantes }}</h3>
+            <small class="text-muted">En el sistema</small>
         </div>
     </div>
+
+    <!-- ACEPTADOS -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-info">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-info small fw-semibold">PENDIENTES</span>
-                    <span class="badge bg-info-subtle text-info"><i class="bi bi-hourglass-split"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-dark">{{ pendientes }}</h3>
-                <small class="text-muted">Por consultar</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3 border-start border-4 border-success">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-success small fw-bold">ACEPTADOS</span>
+                <span class="badge bg-success-subtle text-success rounded-pill p-2"><i class="bi bi-check-circle-fill"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-success">{{ aceptados }}</h3>
+            <small class="text-muted">Válidos SUNAT</small>
         </div>
     </div>
+
+    <!-- OBSERVADOS -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-success">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-success small fw-semibold">ACEPTADOS</span>
-                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle-fill"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-success">{{ aceptados }}</h3>
-                <small class="text-muted">SUNAT Aceptado</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3 border-start border-4 border-warning">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-warning-emphasis small fw-bold">OBSERVADOS</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill p-2"><i class="bi bi-exclamation-triangle-fill"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-warning-emphasis">{{ observados }}</h3>
+            <small class="text-muted">Con observaciones</small>
         </div>
     </div>
+
+    <!-- RECHAZADOS -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-warning">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-warning-emphasis small fw-semibold">OBSERVADOS</span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-circle-fill"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-warning-emphasis">{{ observados }}</h3>
-                <small class="text-muted">Con observaciones</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3 border-start border-4 border-danger">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-danger small fw-bold">RECHAZADOS</span>
+                <span class="badge bg-danger-subtle text-danger rounded-pill p-2"><i class="bi bi-x-circle-fill"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-danger">{{ rechazados }}</h3>
+            <small class="text-muted">No válidos / Anulados</small>
         </div>
     </div>
+
+    <!-- PENDIENTES -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-danger">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-danger small fw-semibold">RECHAZADOS</span>
-                    <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle-fill"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-danger">{{ rechazados }}</h3>
-                <small class="text-muted">No válidos / Anulados</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3 border-start border-4 border-info">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-info-emphasis small fw-bold">PENDIENTES</span>
+                <span class="badge bg-info-subtle text-info-emphasis rounded-pill p-2"><i class="bi bi-hourglass-split"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-dark">{{ pendientes }}</h3>
+            <small class="text-muted">Por consultar</small>
         </div>
     </div>
+
+    <!-- ERROR DE CONSULTA -->
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-secondary">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small fw-semibold">ERROR</span>
-                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-bug-fill"></i></span>
-                </div>
-                <h3 class="fw-bold mb-0 text-secondary">{{ errores }}</h3>
-                <small class="text-muted">Error de consulta</small>
+        <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3 border-start border-4 border-secondary">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-bold">ERROR DE CONSULTA</span>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill p-2"><i class="bi bi-bug-fill"></i></span>
             </div>
+            <h3 class="fw-bold mb-0 text-secondary">{{ errores }}</h3>
+            <small class="text-muted">Problemas de conexión</small>
         </div>
     </div>
 </div>
 
-<!-- Módulos de Acción según Permisos del Rol -->
+<!-- Sección de Gráficos (Chart.js) -->
 <div class="row g-4 mb-4">
-    <!-- ADMINISTRADOR: Control Total -->
-    {% if user.role == 'ADMINISTRADOR' or user.is_superuser %}
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="p-3 bg-danger-subtle text-danger rounded-3 me-3">
-                        <i class="bi bi-shield-lock-fill fs-3"></i>
+    <!-- Gráfico 1: Comprobantes por Estado -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-pie-chart-fill text-primary me-2"></i>Comprobantes por Estado
+                </h6>
+                <span class="badge bg-light text-secondary border small">Distribución %</span>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center p-3">
+                {% if total_comprobantes > 0 %}
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartEstadosCanvas"></canvas>
                     </div>
-                    <div>
-                        <h5 class="fw-bold mb-0">Gestión de Usuarios y Roles</h5>
-                        <small class="text-muted">Control total administrativo</small>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-pie-chart fs-1 opacity-50 d-block mb-2"></i>
+                        <p class="small mb-0">Sin datos de comprobantes registrados.</p>
                     </div>
-                </div>
-                <p class="text-muted small">Cree, modifique y asigne roles a los usuarios (Administrador, Supervisor, Trabajador).</p>
-                <a href="/admin/accounts/user/" class="btn btn-outline-danger btn-sm rounded-pill w-100">
-                    <i class="bi bi-people-fill me-1"></i>Gestionar Usuarios en Admin
-                </a>
+                {% endif %}
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="p-3 bg-dark-subtle text-dark rounded-3 me-3">
-                        <i class="bi bi-journal-text fs-3"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-0">Auditoría del Sistema</h5>
-                        <small class="text-muted">Trazabilidad y seguridad</small>
-                    </div>
-                </div>
-                <p class="text-muted small">Revise la bitácora de inicios de sesión, cambios en comprobantes y consultas.</p>
-                <a href="{% url 'auditoria_list' %}" class="btn btn-outline-dark btn-sm rounded-pill w-100">
-                    <i class="bi bi-shield-shaded me-1"></i>Ver Registros de Auditoría
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
-    <!-- TRABAJADOR / ADMINISTRADOR: Registro, Importación y Validación -->
-    {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="p-3 bg-primary-subtle text-primary rounded-3 me-3">
-                        <i class="bi bi-receipt-cutoff fs-3"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-0">Registro y Validación</h5>
-                        <small class="text-muted">Operaciones del trabajador</small>
-                    </div>
-                </div>
-                <p class="text-muted small">Registre boletas individualmente o realice consultas directas ante SUNAT.</p>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'comprobante_create' %}" class="btn btn-primary btn-sm rounded-pill flex-fill">
-                        <i class="bi bi-plus-circle me-1"></i>Nuevo CP
-                    </a>
-                    <a href="{% url 'importacion_upload' %}" class="btn btn-outline-primary btn-sm rounded-pill flex-fill">
-                        <i class="bi bi-file-earmark-excel me-1"></i>Importar Excel/CSV
-                    </a>
+    <!-- Gráfico 2: Validaciones por Fecha -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-graph-up text-success me-2"></i>Validaciones por Fecha
+                </h6>
+                <span class="badge bg-light text-secondary border small">Evolución Diaria</span>
+            </div>
+            <div class="card-body p-3">
+                <div style="position: relative; height: 260px; width: 100%;">
+                    <canvas id="chartFechasCanvas"></canvas>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- SUPERVISOR / ADMINISTRADOR: Consultas y Reportes -->
-    {% if user.role == 'SUPERVISOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="p-3 bg-warning-subtle text-warning-emphasis rounded-3 me-3">
-                        <i class="bi bi-bar-chart-line-fill fs-3"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-0">Consultas y Reportes</h5>
-                        <small class="text-muted">Supervisión y control</small>
-                    </div>
-                </div>
-                <p class="text-muted small">Consulte comprobantes, estados de validación y descargue reportes consolidados.</p>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'comprobante_list' %}" class="btn btn-warning btn-sm rounded-pill flex-fill text-dark fw-semibold">
-                        <i class="bi bi-search me-1"></i>Consultar CPs
-                    </a>
-                    <a href="/admin/validaciones/validacionsunat/" class="btn btn-outline-warning btn-sm rounded-pill flex-fill text-dark">
-                        <i class="bi bi-check2-all me-1"></i>Validaciones
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
-<!-- Tablas de Actividad Reciente -->
-<div class="row g-4">
-    <!-- Últimos comprobantes -->
+<!-- Sección de Tablas de Actividad Reciente: Últimas Validaciones y Últimas Importaciones -->
+<div class="row g-4 mb-4">
+    <!-- Últimas Validaciones -->
     <div class="col-lg-7">
-        <div class="card border-0 shadow-sm rounded-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white overflow-hidden">
             <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-receipt me-2 text-primary"></i>Comprobantes Recientes
-                </h5>
-                <a href="{% url 'comprobante_list' %}" class="btn btn-sm btn-link text-decoration-none">Ver todos</a>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-clock-history text-primary me-2"></i>Últimas Validaciones ante SUNAT
+                    </h6>
+                    <small class="text-muted">Consultas de comprobantes realizadas recientemente</small>
+                </div>
+                <a href="{% url 'historial_validaciones' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    Ver historial completo <i class="bi bi-arrow-right ms-1"></i>
+                </a>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr class="small text-muted">
-                            <th>Tipo / Serie-N°</th>
-                            <th>RUC Emisor</th>
-                            <th>Fecha</th>
-                            <th>Monto</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cp in ultimos_comprobantes %}
+                    <thead class="table-light small text-muted text-uppercase">
                         <tr>
-                            <td>
-                                <span class="fw-semibold text-dark">{{ cp.codigo_completo }}</span>
-                                <br><small class="text-muted">{{ cp.get_tipo_comprobante_display }}</small>
-                            </td>
-                            <td><code>{{ cp.ruc_emisor }}</code></td>
-                            <td>{{ cp.fecha_emision|date:"d/m/Y" }}</td>
-                            <td><strong>S/ {{ cp.monto|floatformat:2 }}</strong></td>
-                            <td>
-                                {% if cp.estado == 'ACEPTADO' %}
-                                    <span class="badge bg-success">ACEPTADO</span>
-                                {% elif cp.estado == 'OBSERVADO' %}
-                                    <span class="badge bg-warning text-dark">OBSERVADO</span>
-                                {% elif cp.estado == 'RECHAZADO' %}
-                                    <span class="badge bg-danger">RECHAZADO</span>
-                                {% elif cp.estado == 'ERROR_CONSULTA' %}
-                                    <span class="badge bg-secondary">ERROR</span>
-                                {% else %}
-                                    <span class="badge bg-info text-dark">PENDIENTE</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox fs-3 d-block mb-1"></i>
-                                No hay comprobantes registrados aún.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Últimas validaciones -->
-    <div class="col-lg-5">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-clock-history me-2 text-primary"></i>Historial de Consultas
-                </h5>
-                <a href="/admin/validaciones/validacionsunat/" class="btn btn-sm btn-link text-decoration-none">Ver todas</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr class="small text-muted">
+                            <th>Fecha y Hora</th>
                             <th>Comprobante</th>
-                            <th>Código</th>
-                            <th>Fecha</th>
+                            <th>Estado Obtenido</th>
+                            <th>Cód.</th>
+                            <th>Usuario</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for val in ultimas_validaciones %}
                         <tr>
-                            <td>
-                                <span class="fw-semibold">{{ val.comprobante.codigo_completo }}</span>
-                                <br><small class="text-muted">{{ val.estado_sunat|default:"Sin Estado" }}</small>
+                            <td class="text-nowrap">
+                                <small class="fw-semibold text-dark d-block">{{ val.fecha_validacion|date:"d/m/Y" }}</small>
+                                <small class="text-muted font-monospace">{{ val.fecha_validacion|date:"H:i:s" }}</small>
                             </td>
-                            <td><code>{{ val.codigo_respuesta|default:"-" }}</code></td>
-                            <td><small class="text-muted">{{ val.fecha_validacion|date:"d/m/y H:i" }}</small></td>
+                            <td>
+                                <a href="{% url 'comprobante_detail' val.comprobante.pk %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                    {{ val.comprobante.codigo_completo }}
+                                </a>
+                                <small class="text-muted d-block">{{ val.comprobante.ruc_emisor }}</small>
+                            </td>
+                            <td>
+                                {% if 'Aceptado' in val.estado_sunat or val.codigo_respuesta == '1' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="bi bi-check-circle-fill me-1"></i>ACEPTADO
+                                    </span>
+                                {% elif 'Observado' in val.estado_sunat %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO
+                                    </span>
+                                {% elif 'Rechazado' in val.estado_sunat or val.codigo_respuesta == '0' or val.codigo_respuesta == '2' or val.codigo_respuesta == '4' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        <i class="bi bi-x-circle-fill me-1"></i>RECHAZADO
+                                    </span>
+                                {% elif 'PENDIENTE' in val.estado_sunat %}
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                        <i class="bi bi-hourglass-split me-1"></i>PENDIENTE
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        <i class="bi bi-bug-fill me-1"></i>ERROR_CONSULTA
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace small">
+                                    {{ val.codigo_respuesta|default:"N/A" }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="bi bi-person me-1"></i>
+                                    {% if val.usuario %}{{ val.usuario.get_full_name|default:val.usuario.username }}{% else %}Sistema{% endif %}
+                                </small>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">
-                                <i class="bi bi-shield-slash fs-3 d-block mb-1"></i>
-                                Sin validaciones registradas todavía.
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="bi bi-shield-slash fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                                Sin validaciones recientes registradas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimas Importaciones -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white overflow-hidden">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-cloud-arrow-up text-primary me-2"></i>Últimas Importaciones
+                    </h6>
+                    <small class="text-muted">Cargas masivas Excel y CSV procesadas</small>
+                </div>
+                {% if user.role == 'ADMINISTRADOR' or user.role == 'TRABAJADOR' or user.is_superuser %}
+                <a href="{% url 'importacion_list' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    Ver todas <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-muted text-uppercase">
+                        <tr>
+                            <th>Lote</th>
+                            <th>Fecha</th>
+                            <th>Registros</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lote in ultimas_importaciones %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'importacion_detail' lote.pk %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                    Lote #{{ lote.id }}
+                                </a>
+                                <small class="text-muted d-block text-truncate" style="max-width: 140px;" title="{{ lote.nombre_archivo }}">
+                                    {{ lote.nombre_archivo }}
+                                </small>
+                            </td>
+                            <td class="text-nowrap">
+                                <small class="fw-semibold text-dark d-block">{{ lote.fecha_carga|date:"d/m/Y" }}</small>
+                                <small class="text-muted font-monospace">{{ lote.fecha_carga|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ lote.importados_correctos }}/{{ lote.total_leidos }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if lote.estado == 'COMPLETADO' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        COMPLETADO
+                                    </span>
+                                {% elif lote.estado == 'PROCESANDO' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        PROCESANDO
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        ERROR
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bi bi-cloud-slash fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                                Sin lotes de importación registrados.
                             </td>
                         </tr>
                         {% endfor %}
@@ -304,4 +381,180 @@
         </div>
     </div>
 </div>
+
+<!-- Módulos de Acceso Rápido según Rol -->
+<div class="row g-4">
+    <!-- TRABAJADOR / ADMINISTRADOR: Gestión y Comprobantes -->
+    {% if user.role == 'TRABAJADOR' or user.role == 'ADMINISTRADOR' or user.is_superuser %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="p-3 bg-primary-subtle text-primary rounded-3 me-3">
+                    <i class="bi bi-receipt-cutoff fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0">Gestión de Comprobantes</h6>
+                    <small class="text-muted">Registro y validación</small>
+                </div>
+            </div>
+            <p class="text-muted small mb-3">Registre boletas y facturas o ejecute validaciones individuales y masivas ante SUNAT.</p>
+            <div class="d-flex gap-2">
+                <a href="{% url 'comprobante_create' %}" class="btn btn-primary btn-sm rounded-pill flex-grow-1">
+                    <i class="bi bi-plus-circle me-1"></i>Nuevo
+                </a>
+                <a href="{% url 'comprobante_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    Ver Lista
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="p-3 bg-success-subtle text-success rounded-3 me-3">
+                    <i class="bi bi-cloud-upload-fill fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0">Importación Masiva</h6>
+                    <small class="text-muted">Cargas Excel y CSV</small>
+                </div>
+            </div>
+            <p class="text-muted small mb-3">Cargue miles de comprobantes rápidamente mediante archivos con validación de estructura.</p>
+            <a href="{% url 'importacion_upload' %}" class="btn btn-outline-success btn-sm rounded-pill w-100">
+                <i class="bi bi-upload me-1"></i>Cargar Archivo
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ADMINISTRADOR / SUPERVISOR: Auditoría y Consultas -->
+    {% if user.is_administrador %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="p-3 bg-danger-subtle text-danger rounded-3 me-3">
+                    <i class="bi bi-shield-lock-fill fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0">Bitácora de Auditoría</h6>
+                    <small class="text-muted">Trazabilidad y seguridad</small>
+                </div>
+            </div>
+            <p class="text-muted small mb-3">Supervise accesos LOGIN, registros de comprobantes y validaciones con trazabilidad de usuarios.</p>
+            <a href="{% url 'auditoria_list' %}" class="btn btn-outline-danger btn-sm rounded-pill w-100">
+                <i class="bi bi-shield-shaded me-1"></i>Consultar Auditoría
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Librería Chart.js para Renderizado de Gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Gráfico de Comprobantes por Estado (Doughnut)
+    const rawEstados = {{ chart_estados_json|safe }};
+    const ctxEstados = document.getElementById('chartEstadosCanvas');
+    if (ctxEstados && rawEstados) {
+        const totalItems = rawEstados.data.reduce((a, b) => a + b, 0);
+        new Chart(ctxEstados, {
+            type: 'doughnut',
+            data: {
+                labels: rawEstados.labels,
+                datasets: [{
+                    data: rawEstados.data,
+                    backgroundColor: rawEstados.colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 14,
+                            font: { size: 11, family: 'system-ui' }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const pct = totalItems > 0 ? ((val / totalItems) * 100).toFixed(1) : 0;
+                                return ` ${context.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '68%'
+            }
+        });
+    }
+
+    // 2. Gráfico de Validaciones por Fecha (Líneas/Barras Temporales)
+    const rawFechas = {{ chart_fechas_json|safe }};
+    const ctxFechas = document.getElementById('chartFechasCanvas');
+    if (ctxFechas && rawFechas) {
+        const labels = rawFechas.labels.length > 0 ? rawFechas.labels : ['Sin datos'];
+        const totales = rawFechas.totales.length > 0 ? rawFechas.totales : [0];
+        const aceptados = rawFechas.aceptados.length > 0 ? rawFechas.aceptados : [0];
+
+        new Chart(ctxFechas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Consultas',
+                        data: totales,
+                        backgroundColor: 'rgba(13, 110, 253, 0.25)',
+                        borderColor: '#0d6efd',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                    },
+                    {
+                        label: 'Aceptados',
+                        data: aceptados,
+                        backgroundColor: 'rgba(25, 135, 84, 0.75)',
+                        borderColor: '#198754',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 11, family: 'system-ui' }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { size: 10 } },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

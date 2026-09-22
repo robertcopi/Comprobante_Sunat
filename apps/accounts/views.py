@@ -90,38 +90,135 @@ class CustomLogoutView(View):
 class DashboardView(LoginRequiredMixin, TemplateView):
     """
     Panel de control empresarial que adapta métricas y acciones según el rol del usuario.
+    Calcula estadísticas en una sola consulta agregada (sin iterar en memoria),
+    proporciona datos para gráficos (Chart.js) y permite filtrar por rango de fechas.
     """
     template_name = 'dashboard.html'
 
     def get_context_data(self, **kwargs):
+        from datetime import datetime, time, timedelta
+        import json
+        from django.db.models import Count, Q
+        from django.db.models.functions import TruncDate
+        from django.utils import timezone
+        from django.utils.dateparse import parse_date
+
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        # Métricas generales de comprobantes
-        total_comprobantes = Comprobante.objects.count()
-        pendientes = Comprobante.objects.filter(estado=Comprobante.EstadoComprobante.PENDIENTE).count()
-        aceptados = Comprobante.objects.filter(estado=Comprobante.EstadoComprobante.ACEPTADO).count()
-        observados = Comprobante.objects.filter(estado=Comprobante.EstadoComprobante.OBSERVADO).count()
-        rechazados = Comprobante.objects.filter(estado=Comprobante.EstadoComprobante.RECHAZADO).count()
-        errores = Comprobante.objects.filter(estado=Comprobante.EstadoComprobante.ERROR_CONSULTA).count()
+        # 1. Filtros por rango de fechas
+        fecha_desde_raw = self.request.GET.get('fecha_desde')
+        fecha_hasta_raw = self.request.GET.get('fecha_hasta')
+        fecha_desde = parse_date(fecha_desde_raw) if fecha_desde_raw else None
+        fecha_hasta = parse_date(fecha_hasta_raw) if fecha_hasta_raw else None
 
-        # Últimos registros
-        ultimos_comprobantes = Comprobante.objects.select_related('usuario_registro')[:5]
-        ultimas_validaciones = ValidacionSunat.objects.select_related('comprobante', 'usuario')[:5]
+        comprobantes_qs = Comprobante.objects.all()
+        validaciones_qs = ValidacionSunat.objects.all()
 
-        # Métricas de importación para Trabajador / Administrador
+        if fecha_desde:
+            dt_desde = timezone.make_aware(datetime.combine(fecha_desde, time.min))
+            comprobantes_qs = comprobantes_qs.filter(fecha_emision__gte=fecha_desde)
+            validaciones_qs = validaciones_qs.filter(fecha_validacion__gte=dt_desde)
+
+        if fecha_hasta:
+            dt_hasta = timezone.make_aware(datetime.combine(fecha_hasta, time.max))
+            comprobantes_qs = comprobantes_qs.filter(fecha_emision__lte=fecha_hasta)
+            validaciones_qs = validaciones_qs.filter(fecha_validacion__lte=dt_hasta)
+
+        # 2. Consulta agregada ultra-eficiente en una sola consulta SQL (sin iterar en memoria)
+        kpis = comprobantes_qs.aggregate(
+            total=Count('id'),
+            pendientes=Count('id', filter=Q(estado=Comprobante.EstadoComprobante.PENDIENTE)),
+            aceptados=Count('id', filter=Q(estado=Comprobante.EstadoComprobante.ACEPTADO)),
+            observados=Count('id', filter=Q(estado=Comprobante.EstadoComprobante.OBSERVADO)),
+            rechazados=Count('id', filter=Q(estado=Comprobante.EstadoComprobante.RECHAZADO)),
+            errores=Count('id', filter=Q(estado=Comprobante.EstadoComprobante.ERROR_CONSULTA)),
+        )
+
+        total_comprobantes = kpis['total'] or 0
+        pendientes = kpis['pendientes'] or 0
+        aceptados = kpis['aceptados'] or 0
+        observados = kpis['observados'] or 0
+        rechazados = kpis['rechazados'] or 0
+        errores = kpis['errores'] or 0
+
+        # 3. Comprobantes procesados hoy (jornada actual)
+        hoy = timezone.now().date()
+        procesados_hoy = ValidacionSunat.objects.filter(fecha_validacion__date=hoy).count()
+        registrados_hoy = Comprobante.objects.filter(fecha_registro__date=hoy).count()
+
+        # 4. Actividad reciente: últimas validaciones y últimas importaciones
+        ultimas_validaciones = ValidacionSunat.objects.select_related('comprobante', 'usuario').order_by('-fecha_validacion')[:6]
+        ultimas_importaciones = LoteImportacion.objects.select_related('usuario').order_by('-fecha_carga')[:6]
         total_lotes = LoteImportacion.objects.count()
 
+        # 5. Gráfico 1: Comprobantes por estado (Chart.js Dona)
+        chart_estados = {
+            'labels': ['Aceptados', 'Observados', 'Rechazados', 'Pendientes', 'Error Consulta'],
+            'data': [aceptados, observados, rechazados, pendientes, errores],
+            'colors': ['#198754', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d']
+        }
+
+        # 6. Gráfico 2: Validaciones por fecha (Chart.js Barras/Líneas temporales)
+        if not fecha_desde:
+            hace_14_dias = timezone.now() - timedelta(days=14)
+            val_chart_qs = ValidacionSunat.objects.filter(fecha_validacion__gte=hace_14_dias)
+        else:
+            val_chart_qs = validaciones_qs
+
+        serie_fechas = (
+            val_chart_qs
+            .annotate(dia=TruncDate('fecha_validacion'))
+            .values('dia')
+            .annotate(
+                total=Count('id'),
+                aceptados=Count('id', filter=Q(estado_sunat__icontains='Aceptado')),
+                rechazados=Count('id', filter=Q(estado_sunat__icontains='Rechazado') | Q(codigo_respuesta__in=['0', '2', '4'])),
+                errores=Count('id', filter=Q(estado_sunat__icontains='ERROR') | Q(estado_sunat='ERROR_LOCAL'))
+            )
+            .order_by('dia')
+        )
+
+        fechas_labels = []
+        datos_totales = []
+        datos_aceptados = []
+        datos_rechazados = []
+        for item in serie_fechas:
+            if item['dia']:
+                fechas_labels.append(item['dia'].strftime('%d/%m'))
+                datos_totales.append(item['total'])
+                datos_aceptados.append(item['aceptados'])
+                datos_rechazados.append(item['rechazados'])
+
+        chart_fechas = {
+            'labels': fechas_labels,
+            'totales': datos_totales,
+            'aceptados': datos_aceptados,
+            'rechazados': datos_rechazados,
+        }
+
         context.update({
+            # KPIs requeridos
             'total_comprobantes': total_comprobantes,
-            'pendientes': pendientes,
             'aceptados': aceptados,
             'observados': observados,
             'rechazados': rechazados,
+            'pendientes': pendientes,
             'errores': errores,
-            'ultimos_comprobantes': ultimos_comprobantes,
+            # Indicadores adicionales
+            'procesados_hoy': procesados_hoy,
+            'registrados_hoy': registrados_hoy,
+            # Tablas recientes
             'ultimas_validaciones': ultimas_validaciones,
+            'ultimas_importaciones': ultimas_importaciones,
             'total_lotes': total_lotes,
+            # Filtros
+            'fecha_desde': fecha_desde_raw or '',
+            'fecha_hasta': fecha_hasta_raw or '',
+            'filtro_activo': bool(fecha_desde_raw or fecha_hasta_raw),
+            # Gráficos JSON
+            'chart_estados_json': json.dumps(chart_estados),
+            'chart_fechas_json': json.dumps(chart_fechas),
             'user_role': user.get_role_display(),
         })
         return context

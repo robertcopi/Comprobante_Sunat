@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Comprobantes | SUNAT Validator{% endblock %}
+
+{% block content %}
+<!-- Cabecera del Módulo de Reportes -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Reportes</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold text-dark mb-0">
+            <i class="bi bi-file-earmark-bar-graph text-primary me-2"></i>Reporte de Comprobantes Electrónicos
+        </h2>
+        <p class="text-muted small mb-0">Filtre y exporte comprobantes electrónicos validados con el servicio oficial de SUNAT.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'reporte_exportar_excel' %}?{{ url_params }}" class="btn btn-success rounded-pill shadow-sm" title="Descargar reporte en formato Microsoft Excel (.xlsx)">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel (.xlsx)
+        </a>
+        <a href="{% url 'reporte_exportar_pdf' %}?{{ url_params }}" class="btn btn-danger rounded-pill shadow-sm" title="Descargar reporte en formato PDF corporativo">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas de Métricas de la Búsqueda -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Total Filtrados</span>
+                    <h3 class="fw-bold text-dark mb-0 mt-1">{{ total_registros }}</h3>
+                </div>
+                <div class="bg-primary-subtle text-primary p-3 rounded-4">
+                    <i class="bi bi-receipt fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Monto Total Filtrado</span>
+                    <h3 class="fw-bold text-success mb-0 mt-1">S/ {{ monto_total|floatformat:2 }}</h3>
+                </div>
+                <div class="bg-success-subtle text-success p-3 rounded-4">
+                    <i class="bi bi-cash-coin fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Aceptados SUNAT</span>
+                    <h3 class="fw-bold text-success mb-0 mt-1">{{ total_aceptados }}</h3>
+                </div>
+                <div class="bg-success-subtle text-success p-3 rounded-4">
+                    <i class="bi bi-check-circle-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-semibold d-block">Observados / Rechazados</span>
+                    <h3 class="fw-bold text-danger mb-0 mt-1">{{ total_observados }} / {{ total_rechazados }}</h3>
+                </div>
+                <div class="bg-danger-subtle text-danger p-3 rounded-4">
+                    <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros de Reporte (7 Criterios Oficiales) -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white py-3 border-0">
+        <div class="d-flex align-items-center justify-content-between">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-funnel-fill text-primary me-2"></i>Criterios de Filtrado
+            </h6>
+            {% if filtro_activo %}
+                <a href="{% url 'reporte_comprobantes' %}" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2">
+                    <i class="bi bi-x-circle me-1"></i>Limpiar Filtros
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body pt-0">
+        <form method="get" action="{% url 'reporte_comprobantes' %}" class="row g-3">
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">1. Fecha Inicio</label>
+                {{ form.fecha_inicio }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">2. Fecha Fin</label>
+                {{ form.fecha_fin }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">3. RUC Emisor</label>
+                {{ form.ruc }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">4. Estado</label>
+                {{ form.estado }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">5. Tipo de Comprobante</label>
+                {{ form.tipo_comprobante }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">6. Serie</label>
+                {{ form.serie }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label small fw-semibold text-secondary">7. Usuario</label>
+                {{ form.usuario }}
+            </div>
+            <div class="col-md-3 col-sm-6 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 flex-grow-1 shadow-sm">
+                    <i class="bi bi-search me-1"></i>Generar Reporte
+                </button>
+                <a href="{% url 'reporte_comprobantes' %}" class="btn btn-light btn-sm border rounded-pill px-3">
+                    Restablecer
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Resultados en Pantalla -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="text-muted small fw-semibold">
+            Mostrando <strong>{{ comprobantes|length }}</strong> de <strong>{{ total_registros }}</strong> comprobante(s) filtrado(s)
+        </span>
+        <div class="small text-muted">
+            <i class="bi bi-info-circle me-1"></i>Filtros actuales: <span class="fw-semibold text-dark">{{ resumen_filtros }}</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-muted text-uppercase">
+                <tr>
+                    <th>RUC</th>
+                    <th>Tipo</th>
+                    <th>Serie - N°</th>
+                    <th>F. Emisión</th>
+                    <th class="text-end">Monto (S/)</th>
+                    <th>Estado</th>
+                    <th>F. Validación</th>
+                    <th>Mensaje SUNAT</th>
+                    <th>Usuario</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cp in comprobantes %}
+                {% with ult_val=cp.validaciones_list.0 %}
+                <tr>
+                    <td><code>{{ cp.ruc_emisor }}</code></td>
+                    <td>
+                        <span class="badge bg-light text-dark border small">
+                            {{ cp.get_tipo_comprobante_display|slice:":12" }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'comprobante_detail' cp.pk %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                            {{ cp.codigo_completo }}
+                        </a>
+                    </td>
+                    <td class="text-nowrap">{{ cp.fecha_emision|date:"d/m/Y" }}</td>
+                    <td class="text-end fw-bold">S/ {{ cp.monto|floatformat:2 }}</td>
+                    <td>
+                        {% if cp.estado == 'ACEPTADO' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-check-circle-fill me-1"></i>ACEPTADO
+                            </span>
+                        {% elif cp.estado == 'OBSERVADO' %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>OBSERVADO
+                            </span>
+                        {% elif cp.estado == 'RECHAZADO' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                <i class="bi bi-x-circle-fill me-1"></i>RECHAZADO
+                            </span>
+                        {% elif cp.estado == 'PENDIENTE' %}
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                <i class="bi bi-hourglass-split me-1"></i>PENDIENTE
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                <i class="bi bi-bug-fill me-1"></i>ERROR
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        {% if ult_val %}
+                            <small class="fw-semibold text-dark d-block">{{ ult_val.fecha_validacion|date:"d/m/Y" }}</small>
+                            <small class="text-muted font-monospace">{{ ult_val.fecha_validacion|date:"H:i" }}</small>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ult_val and ult_val.mensaje %}
+                            <small class="text-secondary d-inline-block text-truncate" style="max-width: 220px;" title="{{ ult_val.mensaje }}">
+                                {{ ult_val.mensaje }}
+                            </small>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-dark">
+                            <i class="bi bi-person me-1 text-muted"></i>
+                            {% if ult_val and ult_val.usuario %}
+                                {{ ult_val.usuario.username }}
+                            {% elif cp.usuario_registro %}
+                                {{ cp.usuario_registro.username }}
+                            {% else %}
+                                Sistema
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'comprobante_detail' cp.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2" title="Ver detalle del comprobante">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        <h6 class="fw-bold">No se encontraron comprobantes</h6>
+                        <p class="small mb-0">No hay comprobantes que coincidan con los 7 criterios de búsqueda seleccionados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación Bootstrap 5 -->
+    {% if is_paginated %}
+    <div class="card-footer bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <small class="text-muted">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </small>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if url_params %}&{{ url_params }}{% endif %}" title="Primera página">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if url_params %}&{{ url_params }}{% endif %}">
+                        Anterior
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-left"></i></span></li>
+                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if url_params %}&{{ url_params }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if url_params %}&{{ url_params }}{% endif %}">
+                        Siguiente
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if url_params %}&{{ url_params }}{% endif %}" title="Última página">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-right"></i></span></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
