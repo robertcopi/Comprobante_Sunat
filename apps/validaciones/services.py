@@ -114,12 +114,15 @@ class ValidacionComprobanteService:
                     respuesta_sunat={'error_local': error_local}
                 )
 
-                # Paso 9: Registrar auditoría
-                RegistroAuditoria.objects.create(
+                # Paso 9 y 12: Registrar auditoría (VALIDAR_COMPROBANTE)
+                from apps.auditoria.services import AuditoriaService
+                AuditoriaService.registrar(
                     usuario=usuario,
-                    accion='Validación Local Fallida',
+                    accion='VALIDAR_COMPROBANTE',
                     objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
+                    id_objeto=str(comprobante.id),
                     descripcion=f"Fallo en validación previa local: {error_local}",
+                    resultado='ERROR',
                     ip_origen=self.ip_origen
                 )
 
@@ -227,15 +230,18 @@ class ValidacionComprobanteService:
                 respuesta_sunat=resultado_sunat.raw_response or {}
             )
 
-            # Paso 9: Registrar la acción en auditoría
-            RegistroAuditoria.objects.create(
+            # Paso 9 y 12: Registrar la acción en auditoría (VALIDAR_COMPROBANTE)
+            from apps.auditoria.services import AuditoriaService
+            AuditoriaService.registrar(
                 usuario=usuario,
-                accion=f"Validación SUNAT: {nuevo_estado}",
+                accion='VALIDAR_COMPROBANTE',
                 objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
+                id_objeto=str(comprobante.id),
                 descripcion=(
                     f"Comprobante {comprobante.codigo_completo} validado ante SUNAT. "
                     f"Estado resultante: {nuevo_estado}. {desc_detallada}"
                 ),
+                resultado='EXITOSO',
                 ip_origen=self.ip_origen
             )
 
@@ -277,11 +283,14 @@ class ValidacionComprobanteService:
                 respuesta_sunat={'detalle': detalle_tecnico} if isinstance(detalle_tecnico, (dict, list, str)) else {}
             )
 
-            RegistroAuditoria.objects.create(
+            from apps.auditoria.services import AuditoriaService
+            AuditoriaService.registrar(
                 usuario=usuario,
-                accion='Validación SUNAT Fallida',
+                accion='VALIDAR_COMPROBANTE',
                 objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
+                id_objeto=str(comprobante.id),
                 descripcion=f"Error en consulta SUNAT [{codigo_error}]: {mensaje}",
+                resultado='ERROR',
                 ip_origen=self.ip_origen
             )
 
@@ -425,19 +434,22 @@ class ValidacionMasivaService:
             if idx < total_items and self.delay_segundos > 0:
                 time.sleep(self.delay_segundos)
 
-        # Registro consolidado en la bitácora de auditoría
+        # Registro consolidado en la bitácora de auditoría (PASO 12: VALIDACION_MASIVA)
         if resumen.total_procesados > 0:
             try:
-                RegistroAuditoria.objects.create(
+                from apps.auditoria.services import AuditoriaService
+                AuditoriaService.registrar(
                     usuario=usuario,
-                    accion='Validación Masiva SUNAT',
+                    accion='VALIDACION_MASIVA',
                     objeto_afectado=f"Lote de {resumen.total_procesados} comprobante(s)",
+                    id_objeto=f"{resumen.total_procesados}_items",
                     descripcion=(
                         f"Procesamiento masivo finalizado. Total: {resumen.total_procesados} | "
                         f"Aceptados: {resumen.aceptados} | Observados: {resumen.observados} | "
                         f"Rechazados: {resumen.rechazados} | Error Consulta: {resumen.errores_consulta}"
                         + (f" | Ya aceptados omitidos: {resumen.omitidos_por_aceptados}" if resumen.omitidos_por_aceptados > 0 else "")
                     ),
+                    resultado='EXITOSO',
                     ip_origen=self.ip_origen
                 )
             except Exception as e:

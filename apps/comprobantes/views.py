@@ -119,20 +119,20 @@ class ComprobanteCreateView(LoginRequiredMixin, CreateView):
         comprobante.usuario_registro = self.request.user
         comprobante.save()
 
-        # Registro en bitácora de auditoría
-        try:
-            RegistroAuditoria.objects.create(
-                usuario=self.request.user,
-                accion='Creación de Comprobante',
-                objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
-                descripcion=(
-                    f"Registrado comprobante {comprobante.get_tipo_comprobante_display()} "
-                    f"RUC: {comprobante.ruc_emisor}, Monto: S/ {comprobante.monto}"
-                ),
-                ip_origen=get_client_ip(self.request)
-            )
-        except Exception:
-            pass
+        # Registro en bitácora de auditoría (PASO 12: REGISTRAR_COMPROBANTE)
+        from apps.auditoria.services import AuditoriaService
+        AuditoriaService.registrar(
+            usuario=self.request.user,
+            accion='REGISTRAR_COMPROBANTE',
+            objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
+            id_objeto=str(comprobante.id),
+            descripcion=(
+                f"Registrado comprobante {comprobante.get_tipo_comprobante_display()} "
+                f"RUC: {comprobante.ruc_emisor}, Monto: S/ {comprobante.monto}"
+            ),
+            resultado='EXITOSO',
+            request=self.request
+        )
 
         messages.success(
             self.request,
@@ -181,17 +181,17 @@ class ComprobanteUpdateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         comprobante = form.save()
 
-        # Registro en bitácora de auditoría
-        try:
-            RegistroAuditoria.objects.create(
-                usuario=self.request.user,
-                accion='Modificación de Comprobante',
-                objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
-                descripcion=f"Datos del comprobante actualizados por el usuario {self.request.user.username}.",
-                ip_origen=get_client_ip(self.request)
-            )
-        except Exception:
-            pass
+        # Registro en bitácora de auditoría (PASO 12: EDITAR_COMPROBANTE)
+        from apps.auditoria.services import AuditoriaService
+        AuditoriaService.registrar(
+            usuario=self.request.user,
+            accion='EDITAR_COMPROBANTE',
+            objeto_afectado=f"Comprobante {comprobante.codigo_completo}",
+            id_objeto=str(comprobante.id),
+            descripcion=f"Datos del comprobante actualizados por el usuario {self.request.user.username}.",
+            resultado='EXITOSO',
+            request=self.request
+        )
 
         messages.success(self.request, f"Comprobante {comprobante.codigo_completo} actualizado correctamente.")
         return redirect('comprobante_detail', pk=comprobante.pk)
@@ -229,18 +229,19 @@ class ComprobanteDeleteView(LoginRequiredMixin, DeleteView):
     def form_valid(self, form):
         comprobante = self.get_object()
         codigo = comprobante.codigo_completo
+        cp_id = str(comprobante.id)
 
         # Registro en auditoría
-        try:
-            RegistroAuditoria.objects.create(
-                usuario=self.request.user,
-                accion='Eliminación de Comprobante',
-                objeto_afectado=f"Comprobante {codigo}",
-                descripcion=f"Comprobante eliminado del sistema.",
-                ip_origen=get_client_ip(self.request)
-            )
-        except Exception:
-            pass
+        from apps.auditoria.services import AuditoriaService
+        AuditoriaService.registrar(
+            usuario=self.request.user,
+            accion='ELIMINAR_COMPROBANTE',
+            objeto_afectado=f"Comprobante {codigo}",
+            id_objeto=cp_id,
+            descripcion="Comprobante eliminado del sistema.",
+            resultado='EXITOSO',
+            request=self.request
+        )
 
         messages.warning(self.request, f"Comprobante {codigo} ha sido eliminado del sistema.")
         return super().form_valid(form)

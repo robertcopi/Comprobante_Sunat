@@ -68,7 +68,7 @@
                     {% endif %}
                     {% if user.is_administrador %}
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/auditoria/registroauditoria/">
+                        <a class="nav-link {% if request.resolver_match.app_name == 'auditoria' or request.resolver_match.url_name == 'auditoria_list' %}active{% endif %}" href="{% url 'auditoria_list' %}">
                             <i class="bi bi-shield-check me-1"></i>Auditoría
                         </a>
                     </li>

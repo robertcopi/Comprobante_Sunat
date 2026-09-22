@@ -340,20 +340,21 @@ class ImportacionService:
 
         self.lote.save()
 
-        # Registro en bitácora de auditoría
-        try:
-            RegistroAuditoria.objects.create(
-                usuario=self.usuario,
-                accion='Importación Masiva de Comprobantes',
-                objeto_afectado=f"Lote #{self.lote.id} - {self.lote.nombre_archivo}",
-                descripcion=(
-                    f"Carga procesada: {total_leidos} filas leídas, "
-                    f"{importados_correctos} importados, {total_duplicados} duplicados, "
-                    f"{total_errores} con error."
-                ),
-                ip_origen=self.ip_address
-            )
-        except Exception:
-            pass
+        # Registro en bitácora de auditoría (PASO 12: IMPORTAR_ARCHIVO)
+        from apps.auditoria.services import AuditoriaService
+        resultado_importacion = 'EXITOSO' if (importados_correctos > 0 or total_errores == 0) else 'ERROR'
+        AuditoriaService.registrar(
+            usuario=self.usuario,
+            accion='IMPORTAR_ARCHIVO',
+            objeto_afectado=f"Lote #{self.lote.id} - {self.lote.nombre_archivo}",
+            id_objeto=str(self.lote.id),
+            descripcion=(
+                f"Carga procesada: {total_leidos} filas leídas, "
+                f"{importados_correctos} importados, {total_duplicados} duplicados, "
+                f"{total_errores} con error."
+            ),
+            resultado=resultado_importacion,
+            ip_origen=self.ip_address
+        )
 
         return self.lote

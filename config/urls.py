@@ -8,5 +8,6 @@ urlpatterns = [
     path('comprobantes/', include('apps.comprobantes.urls')),
     path('importaciones/', include('apps.importaciones.urls')),
     path('validaciones/', include('apps.validaciones.urls')),
+    path('auditoria/', include('apps.auditoria.urls')),
     path('', lambda request: redirect('dashboard'), name='root'),
 ]

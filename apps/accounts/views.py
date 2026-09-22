@@ -33,20 +33,34 @@ class CustomLoginView(LoginView):
         user = form.get_user()
         login(self.request, user)
 
-        # Registro en bitácora de auditoría
-        try:
-            RegistroAuditoria.objects.create(
-                usuario=user,
-                accion='Inicio de Sesión',
-                objeto_afectado=f"Usuario {user.username}",
-                descripcion=f"Acceso exitoso al sistema con rol: {user.get_role_display()}",
-                ip_origen=get_client_ip(self.request)
-            )
-        except Exception:
-            pass
+        # Registro en bitácora de auditoría (PASO 12: LOGIN)
+        from apps.auditoria.services import AuditoriaService
+        AuditoriaService.registrar(
+            usuario=user,
+            accion='LOGIN',
+            objeto_afectado=f"Usuario {user.username}",
+            id_objeto=str(user.id),
+            descripcion=f"Acceso exitoso al sistema con rol: {user.get_role_display()}",
+            resultado='EXITOSO',
+            request=self.request
+        )
 
         messages.success(self.request, f"¡Bienvenido(a) {user.get_full_name() or user.username}! Rol: {user.get_role_display()}")
         return redirect('dashboard')
+
+    def form_invalid(self, form):
+        # Registro en bitácora de auditoría para intento fallido (sin almacenar contraseña)
+        username = form.data.get('username', 'Desconocido')
+        from apps.auditoria.services import AuditoriaService
+        AuditoriaService.registrar(
+            usuario=None,
+            accion='LOGIN',
+            objeto_afectado=f"Usuario {username}",
+            descripcion=f"Intento fallido de inicio de sesión para el usuario '{username}'. Credenciales inválidas.",
+            resultado='FALLIDO',
+            request=self.request
+        )
+        return super().form_invalid(form)
 
 
 class CustomLogoutView(View):
